@@ -1,41 +1,37 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>3D Enhanced Text Animation</title>
-    <link rel="stylesheet" href="style.css">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
-        rel="stylesheet"
-    />
-</head>
-<body>
-    <div class="scene" id="scene">
-        <div class="content-3d" id="content3d">
-            <!-- Multiple 3D layers -->
-            <div class="layer layer-1" id="layer1"></div>
-            <div class="layer layer-2" id="layer2"></div>
-            <div class="layer layer-3" id="layer3"></div>
-            <div class="layer layer-4" id="layer4"></div>
-            <div class="layer layer-5" id="layer5"></div>
-            
-            <!-- Hearts layer -->
-            <div class="hearts-layer" id="heartsLayer"></div>
-        </div>
-    </div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+        />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <title>3D Enhanced Text Animation</title>
+        <link rel="stylesheet" href="style.css" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    </head>
+    <body>
+        <!-- Three.js Canvas Container -->
+        <div id="three-container"></div>
 
-    <!-- Controls -->
-    <div class="controls">
-        <div class="control-hint">
-            <span class="desktop-hint">Di chuyển chuột để xoay góc nhìn 3D</span>
-            <span class="mobile-hint">Chạm và kéo để xoay góc nhìn 3D</span>
-        </div>
-    </div>
+        <!-- Fallback 2D text overlay for better readability -->
+        <div class="text-overlay" id="textOverlay"></div>
 
-    <script src="script.js"></script>
-</body>
+        <!-- Controls -->
+        <div class="controls">
+            <div class="control-hint">
+                <span class="desktop-hint">Di chuyển chuột để xoay góc nhìn 3D</span>
+                <span class="mobile-hint">Chạm và kéo để xoay góc nhìn 3D</span>
+            </div>
+        </div>
+
+        <script src="script-threejs.js"></script>
+    </body>
 </html>

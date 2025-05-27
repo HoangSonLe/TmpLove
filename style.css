@@ -39,15 +39,24 @@ html::-webkit-scrollbar {
     display: none;
 }
 
-.scene {
+#three-container {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    perspective: 2500px;
-    perspective-origin: center center;
     overflow: hidden;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 50%, #0a0a0a 100%);
+}
+
+.text-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 10;
 }
 
 .content-3d {
