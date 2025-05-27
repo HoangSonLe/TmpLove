@@ -24,10 +24,29 @@
         <!-- Fallback 2D text overlay for better readability -->
         <div class="text-overlay" id="textOverlay"></div>
 
-        <!-- Controls -->
-        <div class="controls">
+        <!-- Hidden autoplay trigger -->
+        <button
+            id="autoplayTrigger"
+            style="position: fixed; top: -100px; left: -100px; opacity: 0; pointer-events: none"
+        >
+            Autoplay
+        </button>
+
+        <!-- Audio Controls (Hidden) -->
+        <div class="audio-controls" style="display: none">
+            <button id="musicToggle" class="music-btn" onclick="toggleBackgroundMusic()">
+                <span id="musicIcon">🎵</span>
+                <span id="musicText">Nhạc nền</span>
+            </button>
+            <div class="song-info">
+                <div class="song-title">Lỡ Như Anh Yêu Em</div>
+                <div class="song-artist">Chi Dân</div>
+            </div>
+        </div>
+
+        <!-- Controls (Hidden) -->
+        <div class="controls" style="display: none">
             <div class="control-hint">
-                <span class="desktop-hint">Di chuyển chuột để xoay góc nhìn 3D</span>
                 <span class="mobile-hint">Chạm và kéo để xoay góc nhìn 3D</span>
             </div>
         </div>

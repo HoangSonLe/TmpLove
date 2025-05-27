@@ -14,6 +14,19 @@ let currentRotationX = 0,
 // Color animation variables
 let colorTime = 0;
 
+// Audio variables
+let backgroundMusic = null;
+let isAudioInitialized = false;
+let isMusicPlaying = false;
+
+// Playlist variables
+let playlist = [
+    "./music/lonhuanhyeuem.mp3",
+    "./music/Christina Perri - A Thousand Years [Official Music Video].mp3",
+];
+let currentTrackIndex = 0;
+let isPlaylistMode = true;
+
 // Function to get animated colors
 function getAnimatedColors(time) {
     // Create a smooth cycle: white -> light pink -> light red -> back to white
@@ -117,6 +130,217 @@ let touchStartX = 0,
 let accumulatedRotationX = 0,
     accumulatedRotationY = 0;
 
+// Audio initialization and control functions
+function initializeAudio() {
+    if (isAudioInitialized) return;
+
+    try {
+        // Create audio element for background music
+        backgroundMusic = new Audio();
+
+        // Shuffle playlist for random order
+        shufflePlaylist();
+
+        // Load first track from playlist
+        loadCurrentTrack();
+
+        // Audio settings
+        backgroundMusic.volume = 0.25; // 25% volume for background
+        backgroundMusic.preload = "auto";
+
+        // Add event listeners
+        backgroundMusic.addEventListener("canplaythrough", () => {
+            console.log("Track loaded successfully:", getCurrentTrackName());
+            updateMusicButton(false);
+            // Try to play when track is ready
+            if (!isMusicPlaying) {
+                playBackgroundMusic();
+            }
+        });
+
+        backgroundMusic.addEventListener("play", () => {
+            updateMusicButton(true);
+        });
+
+        backgroundMusic.addEventListener("pause", () => {
+            updateMusicButton(false);
+        });
+
+        backgroundMusic.addEventListener("ended", () => {
+            // Auto-play next track when current track ends
+            playNextTrack();
+        });
+
+        backgroundMusic.addEventListener("error", (e) => {
+            console.log("Error loading track:", getCurrentTrackName(), e);
+            // Try next track if current one fails
+            playNextTrack();
+        });
+
+        isAudioInitialized = true;
+
+        // Try to auto-play music immediately
+        setTimeout(() => {
+            playBackgroundMusic();
+        }, 500); // Small delay to ensure everything is loaded
+
+        // Try to trigger autoplay using hidden button
+        setTimeout(() => {
+            if (!isMusicPlaying) {
+                const autoplayBtn = document.getElementById("autoplayTrigger");
+                if (autoplayBtn) {
+                    autoplayBtn.click();
+                    setTimeout(() => {
+                        playBackgroundMusic();
+                    }, 100);
+                }
+            }
+        }, 1000);
+    } catch (error) {
+        console.log("Error initializing audio:", error);
+    }
+}
+
+function playBackgroundMusic() {
+    if (!backgroundMusic || isMusicPlaying) return;
+
+    backgroundMusic
+        .play()
+        .then(() => {
+            isMusicPlaying = true;
+            console.log("Background music started playing automatically");
+        })
+        .catch(() => {
+            console.log("Autoplay blocked, will start music on first user interaction");
+            // Add listeners to start music on ANY user interaction
+            document.addEventListener("click", startMusicOnInteraction, { once: true });
+            document.addEventListener("touchstart", startMusicOnInteraction, { once: true });
+            document.addEventListener("touchmove", startMusicOnInteraction, { once: true });
+            document.addEventListener("mousemove", startMusicOnInteraction, { once: true });
+        });
+}
+
+function startMusicOnInteraction() {
+    console.log("User interaction detected, attempting to start music");
+    if (backgroundMusic && !isMusicPlaying) {
+        // Reset the audio source to ensure it's ready
+        const currentSrc = backgroundMusic.src;
+        backgroundMusic.src = currentSrc;
+
+        backgroundMusic
+            .play()
+            .then(() => {
+                isMusicPlaying = true;
+                console.log("Background music started after user interaction");
+            })
+            .catch((error) => {
+                console.log("Still could not play background music:", error);
+                // Try again with a different approach
+                setTimeout(() => {
+                    if (!isMusicPlaying) {
+                        backgroundMusic.load();
+                        backgroundMusic
+                            .play()
+                            .then(() => {
+                                isMusicPlaying = true;
+                                console.log("Background music started on retry");
+                            })
+                            .catch(() => {
+                                console.log("Final attempt failed");
+                            });
+                    }
+                }, 100);
+            });
+    }
+}
+
+function toggleBackgroundMusic() {
+    if (!backgroundMusic) return;
+
+    if (isMusicPlaying) {
+        backgroundMusic.pause();
+        isMusicPlaying = false;
+        console.log("Background music paused");
+    } else {
+        backgroundMusic
+            .play()
+            .then(() => {
+                isMusicPlaying = true;
+                console.log("Background music resumed");
+            })
+            .catch((error) => {
+                console.log("Could not resume background music:", error);
+            });
+    }
+}
+
+// Function to update music button appearance
+function updateMusicButton(isPlaying) {
+    const musicBtn = document.getElementById("musicToggle");
+    const musicIcon = document.getElementById("musicIcon");
+    const musicText = document.getElementById("musicText");
+
+    if (!musicBtn || !musicIcon || !musicText) return;
+
+    if (isPlaying) {
+        musicBtn.classList.add("playing");
+        musicIcon.textContent = "🎵";
+        musicText.textContent = "Đang phát";
+    } else {
+        musicBtn.classList.remove("playing");
+        musicIcon.textContent = "🎵";
+        musicText.textContent = "Nhạc nền";
+    }
+}
+
+// Playlist management functions
+function loadCurrentTrack() {
+    if (playlist.length === 0) return;
+
+    const currentTrack = playlist[currentTrackIndex];
+    backgroundMusic.src = currentTrack;
+    console.log("Loading track:", getCurrentTrackName());
+}
+
+function getCurrentTrackName() {
+    if (playlist.length === 0) return "Unknown";
+
+    const currentTrack = playlist[currentTrackIndex];
+    // Extract filename from path
+    const filename = currentTrack.split("/").pop();
+    // Remove .mp3 extension and decode URI
+    return decodeURIComponent(filename.replace(".mp3", ""));
+}
+
+function playNextTrack() {
+    if (playlist.length === 0) return;
+
+    // Move to next track
+    currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+
+    // Load and play next track
+    loadCurrentTrack();
+
+    // Reset playing state
+    isMusicPlaying = false;
+
+    // Play the new track
+    setTimeout(() => {
+        playBackgroundMusic();
+    }, 100); // Small delay to ensure track is loaded
+
+    console.log("Playing next track:", getCurrentTrackName());
+}
+
+function shufflePlaylist() {
+    // Fisher-Yates shuffle algorithm
+    for (let i = playlist.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [playlist[i], playlist[j]] = [playlist[j], playlist[i]];
+    }
+    console.log("Playlist shuffled");
+}
+
 // Initialize Three.js scene
 function init() {
     // Create scene
@@ -145,6 +369,9 @@ function init() {
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(50, 50, 100);
     scene.add(directionalLight);
+
+    // Initialize background music
+    initializeAudio();
 
     // Setup event listeners
     setupEventListeners();
@@ -266,7 +493,7 @@ function createTextMesh() {
     const offsetZ = (Math.random() - 0.5) * 40; // Random Z offset
 
     textMesh.position.x = Math.cos(angle) * radius + offsetX;
-    textMesh.position.y = 120 + Math.random() * 100; // Higher and more varied starting point
+    textMesh.position.y = 200 + Math.random() * 50; // Start high above screen
     textMesh.position.z = Math.sin(angle) * radius + offsetZ;
 
     // Make text always face the camera (no random rotation)
@@ -333,7 +560,7 @@ function createHeartMesh() {
     const offsetZ = (Math.random() - 0.5) * 30; // Random Z offset
 
     heartMesh.position.x = Math.cos(angle) * radius + offsetX;
-    heartMesh.position.y = 110 + Math.random() * 60; // Higher and more varied starting point
+    heartMesh.position.y = 190 + Math.random() * 40; // Start high above screen
     heartMesh.position.z = Math.sin(angle) * radius + offsetZ;
 
     // Make hearts face the camera
@@ -362,6 +589,28 @@ function setupEventListeners() {
 
     // Window resize
     window.addEventListener("resize", onWindowResize);
+
+    // Add additional music start triggers
+    document.addEventListener("click", tryStartMusic);
+    document.addEventListener("touchstart", tryStartMusic);
+    document.addEventListener("keydown", tryStartMusic);
+    window.addEventListener("focus", tryStartMusic);
+}
+
+// Function to try starting music on any interaction
+function tryStartMusic() {
+    if (backgroundMusic && !isMusicPlaying && isAudioInitialized) {
+        console.log("Attempting to start music from interaction");
+        backgroundMusic
+            .play()
+            .then(() => {
+                isMusicPlaying = true;
+                console.log("Music started successfully from interaction");
+            })
+            .catch(() => {
+                console.log("Music start failed from interaction");
+            });
+    }
 }
 
 function handleMouseMove(event) {
@@ -469,4 +718,31 @@ function animate() {
 }
 
 // Start when page loads
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", () => {
+    init();
+
+    // Additional attempts to start music
+    setTimeout(() => {
+        if (!isMusicPlaying && isAudioInitialized) {
+            console.log("Attempting delayed music start");
+            playBackgroundMusic();
+        }
+    }, 1000);
+
+    setTimeout(() => {
+        if (!isMusicPlaying && isAudioInitialized) {
+            console.log("Final attempt to start music");
+            tryStartMusic();
+        }
+    }, 2000);
+});
+
+// Also try when window loads
+window.addEventListener("load", () => {
+    setTimeout(() => {
+        if (!isMusicPlaying && isAudioInitialized) {
+            console.log("Attempting music start on window load");
+            tryStartMusic();
+        }
+    }, 500);
+});
