@@ -26,13 +26,21 @@ const messages = [
 const speeds = ["speed-1", "speed-2", "speed-3", "speed-4", "speed-5"];
 const layers = ["layer1", "layer2", "layer3", "layer4", "layer5"];
 
-// Mouse tracking for 3D rotation
+// Enhanced 3D tracking for multi-directional movement
 let mouseX = 0;
 let mouseY = 0;
 let targetRotationX = 0;
 let targetRotationY = 0;
+let targetRotationZ = 0;
 let currentRotationX = 0;
 let currentRotationY = 0;
+let currentRotationZ = 0;
+let targetTranslateX = 0;
+let targetTranslateY = 0;
+let targetTranslateZ = 0;
+let currentTranslateX = 0;
+let currentTranslateY = 0;
+let currentTranslateZ = 0;
 
 // Create text elements for each layer
 function createTextForLayer(layerId, layerIndex) {
@@ -67,8 +75,11 @@ function createSingleTextForLayer(layer, layerIndex) {
     textElement.style.left = Math.random() * 80 + 10 + "%";
     textElement.style.top = "-300px"; // Start well above screen
 
-    // Random delay - ensure text starts from outside screen
-    textElement.style.animationDelay = Math.random() * 1 + "s";
+    // Random delay for both fall and color animations
+    const fallDelay = Math.random() * 1;
+    const colorDelay = Math.random() * 4; // Random color animation delay
+
+    textElement.style.animationDelay = `${fallDelay}s, ${colorDelay}s`;
 
     layer.appendChild(textElement);
 
@@ -116,85 +127,150 @@ function createHearts() {
     }, 2000); // Every 2 seconds instead of 4
 }
 
-// Mouse movement for 3D rotation
+// Enhanced mouse movement for multi-directional 3D
 function handleMouseMove(event) {
     mouseX = (event.clientX / window.innerWidth) * 2 - 1;
     mouseY = (event.clientY / window.innerHeight) * 2 - 1;
 
-    targetRotationY = mouseX * 12; // Gentler rotation for mobile
-    targetRotationX = -mouseY * 8; // Gentler rotation for mobile
+    // Unlimited rotation range for true 3D freedom
+    targetRotationY = mouseX * 60; // Much wider left-right rotation
+    targetRotationX = -mouseY * 45; // Much wider up-down rotation
+    targetRotationZ = mouseX * mouseY * 15; // Enhanced diagonal tilt
+
+    // Extended translation for immersive depth
+    targetTranslateX = mouseX * 80;
+    targetTranslateY = mouseY * 60;
+    targetTranslateZ = (Math.abs(mouseX) + Math.abs(mouseY)) * 40; // Deep Z-movement
 }
 
-// Touch support for mobile
-function handleTouchMove(event) {
-    event.preventDefault();
-    if (event.touches.length > 0) {
-        const touch = event.touches[0];
-        mouseX = (touch.clientX / window.innerWidth) * 2 - 1;
-        mouseY = (touch.clientY / window.innerHeight) * 2 - 1;
+// Touch tracking variables for camera-like movement
+let touchStartX = 0;
+let touchStartY = 0;
+let touchCurrentX = 0;
+let touchCurrentY = 0;
+let isTouching = false;
 
-        targetRotationY = mouseX * 12;
-        targetRotationX = -mouseY * 8;
-    }
-}
-
+// Enhanced touch support - camera-like movement similar to mouse
 function handleTouchStart(event) {
     event.preventDefault();
     if (event.touches.length > 0) {
         const touch = event.touches[0];
-        mouseX = (touch.clientX / window.innerWidth) * 2 - 1;
-        mouseY = (touch.clientY / window.innerHeight) * 2 - 1;
-
-        targetRotationY = mouseX * 12;
-        targetRotationX = -mouseY * 8;
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        touchCurrentX = touch.clientX;
+        touchCurrentY = touch.clientY;
+        isTouching = true;
     }
 }
 
-// Smooth rotation animation
-function updateRotation() {
-    currentRotationX += (targetRotationX - currentRotationX) * 0.05;
-    currentRotationY += (targetRotationY - currentRotationY) * 0.05;
+function handleTouchMove(event) {
+    event.preventDefault();
+    if (event.touches.length > 0 && isTouching) {
+        const touch = event.touches[0];
+        touchCurrentX = touch.clientX;
+        touchCurrentY = touch.clientY;
 
-    const scene = document.getElementById("scene");
-    scene.style.transform = `rotateX(${currentRotationX}deg) rotateY(${currentRotationY}deg)`;
+        // Calculate relative movement from touch start position
+        const deltaX = (touchCurrentX - touchStartX) / window.innerWidth;
+        const deltaY = (touchCurrentY - touchStartY) / window.innerHeight;
+
+        // Convert to normalized coordinates like mouse movement
+        mouseX = deltaX * 2; // Amplify movement
+        mouseY = deltaY * 2;
+
+        // Clamp values to prevent extreme rotation
+        mouseX = Math.max(-1, Math.min(1, mouseX));
+        mouseY = Math.max(-1, Math.min(1, mouseY));
+
+        // Apply unlimited camera-like rotation for mobile freedom
+        targetRotationY = mouseX * 70; // Wide horizontal rotation for mobile
+        targetRotationX = -mouseY * 50; // Wide vertical rotation for mobile
+        targetRotationZ = mouseX * mouseY * 18; // Enhanced diagonal tilt
+
+        // Deep translation for immersive mobile experience
+        targetTranslateX = mouseX * 90;
+        targetTranslateY = mouseY * 70;
+        targetTranslateZ = (Math.abs(mouseX) + Math.abs(mouseY)) * 45;
+    }
+}
+
+function handleTouchEnd(event) {
+    event.preventDefault();
+    isTouching = false;
+
+    // Gradually return to center position
+    const returnSpeed = 0.05;
+    const returnToCenter = () => {
+        if (!isTouching) {
+            mouseX *= 1 - returnSpeed;
+            mouseY *= 1 - returnSpeed;
+
+            targetRotationY = mouseX * 70;
+            targetRotationX = -mouseY * 50;
+            targetRotationZ = mouseX * mouseY * 18;
+
+            targetTranslateX = mouseX * 90;
+            targetTranslateY = mouseY * 70;
+            targetTranslateZ = (Math.abs(mouseX) + Math.abs(mouseY)) * 45;
+
+            if (Math.abs(mouseX) > 0.01 || Math.abs(mouseY) > 0.01) {
+                requestAnimationFrame(returnToCenter);
+            } else {
+                mouseX = 0;
+                mouseY = 0;
+                targetRotationX = 0;
+                targetRotationY = 0;
+                targetRotationZ = 0;
+                targetTranslateX = 0;
+                targetTranslateY = 0;
+                targetTranslateZ = 0;
+            }
+        }
+    };
+    requestAnimationFrame(returnToCenter);
+}
+
+// Enhanced smooth 3D animation with multi-dimensional movement
+function updateRotation() {
+    // Smooth interpolation for all transformations
+    currentRotationX += (targetRotationX - currentRotationX) * 0.1;
+    currentRotationY += (targetRotationY - currentRotationY) * 0.1;
+    currentRotationZ += (targetRotationZ - currentRotationZ) * 0.08;
+    currentTranslateX += (targetTranslateX - currentTranslateX) * 0.12;
+    currentTranslateY += (targetTranslateY - currentTranslateY) * 0.12;
+    currentTranslateZ += (targetTranslateZ - currentTranslateZ) * 0.1;
+
+    // Apply all transformations to content only, not background
+    const content3d = document.getElementById("content3d");
+    content3d.style.transform = `
+        scale(1.1)
+        translateX(${currentTranslateX}px)
+        translateY(${currentTranslateY}px)
+        translateZ(${currentTranslateZ}px)
+        rotateX(${currentRotationX}deg)
+        rotateY(${currentRotationY}deg)
+        rotateZ(${currentRotationZ}deg)
+    `;
 
     requestAnimationFrame(updateRotation);
 }
 
 // Initialize everything
 function init() {
-    console.log("Starting 3D text animation...");
+    console.log("Starting enhanced 3D text animation...");
 
-    // Create text for each layer immediately
+    // Create text for each layer
     layers.forEach((layerId, index) => {
-        console.log(`Creating text for layer: ${layerId}`);
-        const layer = document.getElementById(layerId);
-        if (layer) {
-            console.log(`Layer ${layerId} found, creating text...`);
-            createTextForLayer(layerId, index);
-        } else {
-            console.error(`Layer ${layerId} not found!`);
-        }
+        createTextForLayer(layerId, index);
     });
 
-    // Create hearts
+    // Start hearts
     createHearts();
 
-    // Add mouse event listener
-    document.addEventListener("mousemove", handleMouseMove);
-
-    // Add touch support for mobile
-    document.addEventListener("touchmove", handleTouchMove);
-    document.addEventListener("touchstart", handleTouchStart);
-
-    // Start rotation animation
+    // Start 3D rotation updates
     updateRotation();
 
-    // Add click effect
-    document.addEventListener("click", createClickEffect);
-    document.addEventListener("touchend", createClickEffect);
-
-    console.log("Animation initialized!");
+    console.log("Enhanced 3D animation initialized!");
 }
 
 // Click effect optimized for mobile
@@ -246,20 +322,28 @@ const style = document.createElement("style");
 style.textContent = `
     @keyframes clickBurst {
         0% {
-            transform: scale(0) translateY(0px);
+            transform: scale(0.5) translateY(0px);
             opacity: 1;
         }
         50% {
-            transform: scale(1.5) translateY(-50px);
+            transform: scale(1.2) translateY(-20px);
             opacity: 0.8;
         }
         100% {
-            transform: scale(0) translateY(-100px);
+            transform: scale(0.3) translateY(-60px);
             opacity: 0;
         }
     }
 `;
 document.head.appendChild(style);
+
+// Event listeners
+document.addEventListener("mousemove", handleMouseMove);
+document.addEventListener("touchstart", handleTouchStart);
+document.addEventListener("touchmove", handleTouchMove);
+document.addEventListener("touchend", handleTouchEnd);
+document.addEventListener("click", createClickEffect);
+document.addEventListener("touchend", createClickEffect);
 
 // Start when page loads
 document.addEventListener("DOMContentLoaded", init);
