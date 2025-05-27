@@ -11,6 +11,63 @@ let targetRotationX = 0,
 let currentRotationX = 0,
     currentRotationY = 0;
 
+// Color animation variables
+let colorTime = 0;
+
+// Function to get animated colors
+function getAnimatedColors(time) {
+    // Create a smooth cycle: white -> light pink -> light red -> back to white
+    const cycle = (Math.sin(time * 0.001) + 1) / 2; // 0 to 1 smooth cycle
+
+    let color1, color2, color3;
+
+    if (cycle < 0.33) {
+        // White to light pink
+        const t = cycle / 0.33;
+        color1 = interpolateColor("#ffffff", "#ffb3d9", t);
+        color2 = interpolateColor("#ffffff", "#ff99cc", t);
+        color3 = interpolateColor("#ffffff", "#ff80b3", t);
+    } else if (cycle < 0.66) {
+        // Light pink to light red
+        const t = (cycle - 0.33) / 0.33;
+        color1 = interpolateColor("#ffb3d9", "#ff9999", t);
+        color2 = interpolateColor("#ff99cc", "#ff6666", t);
+        color3 = interpolateColor("#ff80b3", "#ff4d4d", t);
+    } else {
+        // Light red back to white
+        const t = (cycle - 0.66) / 0.34;
+        color1 = interpolateColor("#ff9999", "#ffffff", t);
+        color2 = interpolateColor("#ff6666", "#ffffff", t);
+        color3 = interpolateColor("#ff4d4d", "#ffffff", t);
+    }
+
+    return { color1, color2, color3 };
+}
+
+// Helper function to interpolate between two hex colors
+function interpolateColor(color1, color2, factor) {
+    const c1 = hexToRgb(color1);
+    const c2 = hexToRgb(color2);
+
+    const r = Math.round(c1.r + (c2.r - c1.r) * factor);
+    const g = Math.round(c1.g + (c2.g - c1.g) * factor);
+    const b = Math.round(c1.b + (c2.b - c1.b) * factor);
+
+    return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Helper function to convert hex to RGB
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+        ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16),
+          }
+        : null;
+}
+
 // Love messages in Vietnamese
 const loveMessages = [
     "Anh yêu em",
@@ -103,25 +160,39 @@ function init() {
 function createTextElements() {
     // Create text VERY frequently for heavy rain effect
     setInterval(() => {
-        // Create 4-6 texts at once for heavy rain
-        for (let i = 0; i < 4 + Math.floor(Math.random() * 3); i++) {
+        // Create 6-10 texts at once for very heavy rain
+        for (let i = 0; i < 6 + Math.floor(Math.random() * 5); i++) {
             createTextMesh();
         }
-        // Create 1-2 hearts
-        for (let i = 0; i < 1 + Math.floor(Math.random() * 2); i++) {
+        // Create 2-4 hearts
+        for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) {
             createHeartMesh();
         }
-    }, 300); // Much more frequent
+    }, 200); // Even more frequent
 
     // Create LOTS of initial elements for immediate heavy rain effect
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 80; i++) {
         setTimeout(() => {
             createTextMesh();
             if (i % 2 === 0) {
                 // More hearts
                 createHeartMesh();
             }
-        }, i * 50); // Very fast initial creation
+        }, i * 30); // Even faster initial creation
+    }
+
+    // Add multiple layers of creation for better distribution
+    for (let layer = 0; layer < 3; layer++) {
+        setTimeout(() => {
+            for (let i = 0; i < 20; i++) {
+                setTimeout(() => {
+                    createTextMesh();
+                    if (i % 3 === 0) {
+                        createHeartMesh();
+                    }
+                }, i * 100);
+            }
+        }, layer * 1000);
     }
 }
 
@@ -137,11 +208,12 @@ function createTextMesh() {
     context.fillStyle = "rgba(0, 0, 0, 0)";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Create gradient text
+    // Create gradient text with animated colors
+    const colors = getAnimatedColors(Date.now());
     const gradient = context.createLinearGradient(0, 0, canvas.width, 0);
-    gradient.addColorStop(0, "#ffb3d9");
-    gradient.addColorStop(0.5, "#ff80b3");
-    gradient.addColorStop(1, "#ff4d80");
+    gradient.addColorStop(0, colors.color1);
+    gradient.addColorStop(0.5, colors.color2);
+    gradient.addColorStop(1, colors.color3);
 
     // Enable high-quality text rendering
     context.textRenderingOptimization = "optimizeQuality";
@@ -179,19 +251,23 @@ function createTextMesh() {
         side: THREE.DoubleSide,
     });
 
-    // Create geometry - Much bigger text
-    const geometry = new THREE.PlaneGeometry(40, 10);
+    // Create geometry - Even bigger text
+    const geometry = new THREE.PlaneGeometry(60, 15);
 
     // Create mesh
     const textMesh = new THREE.Mesh(geometry, material);
 
-    // Position text closer and more densely around the viewer
+    // Better distribution around the viewer for even coverage
     const angle = Math.random() * Math.PI * 2; // Random angle around circle
-    const radius = 30 + Math.random() * 80; // Much closer to viewer
+    const radius = 80 + Math.random() * 120; // Further from viewer
 
-    textMesh.position.x = Math.cos(angle) * radius;
-    textMesh.position.y = 100 + Math.random() * 80; // Higher starting point
-    textMesh.position.z = Math.sin(angle) * radius;
+    // Add some randomness to create more natural distribution
+    const offsetX = (Math.random() - 0.5) * 40; // Random X offset
+    const offsetZ = (Math.random() - 0.5) * 40; // Random Z offset
+
+    textMesh.position.x = Math.cos(angle) * radius + offsetX;
+    textMesh.position.y = 120 + Math.random() * 100; // Higher and more varied starting point
+    textMesh.position.z = Math.sin(angle) * radius + offsetZ;
 
     // Make text always face the camera (no random rotation)
     textMesh.lookAt(camera.position);
@@ -245,16 +321,20 @@ function createHeartMesh() {
         side: THREE.DoubleSide,
     });
 
-    const geometry = new THREE.PlaneGeometry(15, 15); // Bigger heart geometry
+    const geometry = new THREE.PlaneGeometry(20, 20); // Even bigger heart geometry
     const heartMesh = new THREE.Mesh(geometry, material);
 
-    // Position hearts closer and more densely around the viewer
+    // Better distribution around the viewer for even coverage
     const angle = Math.random() * Math.PI * 2;
-    const radius = 25 + Math.random() * 70; // Much closer
+    const radius = 60 + Math.random() * 100; // Further from viewer
 
-    heartMesh.position.x = Math.cos(angle) * radius;
-    heartMesh.position.y = 100 + Math.random() * 30; // Start from top
-    heartMesh.position.z = Math.sin(angle) * radius;
+    // Add some randomness to create more natural distribution
+    const offsetX = (Math.random() - 0.5) * 30; // Random X offset
+    const offsetZ = (Math.random() - 0.5) * 30; // Random Z offset
+
+    heartMesh.position.x = Math.cos(angle) * radius + offsetX;
+    heartMesh.position.y = 110 + Math.random() * 60; // Higher and more varied starting point
+    heartMesh.position.z = Math.sin(angle) * radius + offsetZ;
 
     // Make hearts face the camera
     heartMesh.lookAt(camera.position);
@@ -345,6 +425,9 @@ function onWindowResize() {
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
+
+    // Update color animation time
+    colorTime += 16; // Approximately 60fps
 
     // Slower, smoother camera rotation
     currentRotationX += (targetRotationX - currentRotationX) * 0.03;
