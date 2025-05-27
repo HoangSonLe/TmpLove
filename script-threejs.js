@@ -135,31 +135,58 @@ function initializeAudio() {
     if (isAudioInitialized) return;
 
     try {
+        console.log("🎵 Initializing audio system...");
+
         // Create audio element for background music
         backgroundMusic = new Audio();
+
+        // Enable aggressive loading
+        backgroundMusic.crossOrigin = "anonymous";
+        backgroundMusic.preload = "auto";
 
         // Shuffle playlist for random order
         shufflePlaylist();
 
+        // Audio settings for immediate playback
+        backgroundMusic.volume = 0.25; // 25% volume for background
+        backgroundMusic.preload = "auto";
+        backgroundMusic.autoplay = true; // Try native autoplay
+
         // Load first track from playlist
         loadCurrentTrack();
 
-        // Audio settings
-        backgroundMusic.volume = 0.25; // 25% volume for background
-        backgroundMusic.preload = "auto";
-
         // Add event listeners
+        backgroundMusic.addEventListener("loadeddata", () => {
+            console.log("Track data loaded:", getCurrentTrackName());
+            // Try to play immediately when data is loaded
+            if (!isMusicPlaying) {
+                console.log("Attempting immediate play on loadeddata");
+                playBackgroundMusic();
+            }
+        });
+
+        backgroundMusic.addEventListener("canplay", () => {
+            console.log("Track can play:", getCurrentTrackName());
+            // Try to play when track can start playing
+            if (!isMusicPlaying) {
+                console.log("Attempting immediate play on canplay");
+                playBackgroundMusic();
+            }
+        });
+
         backgroundMusic.addEventListener("canplaythrough", () => {
             console.log("Track loaded successfully:", getCurrentTrackName());
             updateMusicButton(false);
             // Try to play when track is ready
             if (!isMusicPlaying) {
+                console.log("Attempting immediate play on canplaythrough");
                 playBackgroundMusic();
             }
         });
 
         backgroundMusic.addEventListener("play", () => {
             updateMusicButton(true);
+            console.log("Music started playing:", getCurrentTrackName());
         });
 
         backgroundMusic.addEventListener("pause", () => {
@@ -179,23 +206,9 @@ function initializeAudio() {
 
         isAudioInitialized = true;
 
-        // Try to auto-play music immediately
-        setTimeout(() => {
-            playBackgroundMusic();
-        }, 500); // Small delay to ensure everything is loaded
-
-        // Try to trigger autoplay using hidden button
-        setTimeout(() => {
-            if (!isMusicPlaying) {
-                const autoplayBtn = document.getElementById("autoplayTrigger");
-                if (autoplayBtn) {
-                    autoplayBtn.click();
-                    setTimeout(() => {
-                        playBackgroundMusic();
-                    }, 100);
-                }
-            }
-        }, 1000);
+        // Try to auto-play music immediately - no delay
+        console.log("Attempting immediate autoplay");
+        playBackgroundMusic();
     } catch (error) {
         console.log("Error initializing audio:", error);
     }
@@ -204,52 +217,66 @@ function initializeAudio() {
 function playBackgroundMusic() {
     if (!backgroundMusic || isMusicPlaying) return;
 
+    console.log("Attempting to play music now...");
+
+    // Set volume and ensure it's ready
+    backgroundMusic.volume = 0.25;
+
     backgroundMusic
         .play()
         .then(() => {
             isMusicPlaying = true;
-            console.log("Background music started playing automatically");
+            console.log("✅ Background music started playing automatically");
         })
-        .catch(() => {
-            console.log("Autoplay blocked, will start music on first user interaction");
+        .catch((error) => {
+            console.log("❌ Autoplay blocked:", error.message);
+            console.log("🔄 Setting up interaction listeners...");
             // Add listeners to start music on ANY user interaction
-            document.addEventListener("click", startMusicOnInteraction, { once: true });
-            document.addEventListener("touchstart", startMusicOnInteraction, { once: true });
-            document.addEventListener("touchmove", startMusicOnInteraction, { once: true });
-            document.addEventListener("mousemove", startMusicOnInteraction, { once: true });
+            addInteractionListeners();
         });
 }
 
-function startMusicOnInteraction() {
-    console.log("User interaction detected, attempting to start music");
+function addInteractionListeners() {
+    // Remove existing listeners first to avoid duplicates
+    document.removeEventListener("click", startMusicOnInteraction);
+    document.removeEventListener("touchstart", startMusicOnInteraction);
+    document.removeEventListener("touchmove", startMusicOnInteraction);
+    document.removeEventListener("mousemove", startMusicOnInteraction);
+    document.removeEventListener("keydown", startMusicOnInteraction);
+
+    // Add fresh listeners
+    document.addEventListener("click", startMusicOnInteraction, { once: true });
+    document.addEventListener("touchstart", startMusicOnInteraction, { once: true });
+    document.addEventListener("touchmove", startMusicOnInteraction, { once: true });
+    document.addEventListener("mousemove", startMusicOnInteraction, { once: true });
+    document.addEventListener("keydown", startMusicOnInteraction, { once: true });
+}
+
+function startMusicOnInteraction(event) {
+    console.log("🎯 User interaction detected:", event.type);
     if (backgroundMusic && !isMusicPlaying) {
-        // Reset the audio source to ensure it's ready
-        const currentSrc = backgroundMusic.src;
-        backgroundMusic.src = currentSrc;
+        // Immediate play attempt
+        backgroundMusic.volume = 0.25;
 
         backgroundMusic
             .play()
             .then(() => {
                 isMusicPlaying = true;
-                console.log("Background music started after user interaction");
+                console.log("✅ Music started after user interaction!");
             })
             .catch((error) => {
-                console.log("Still could not play background music:", error);
-                // Try again with a different approach
-                setTimeout(() => {
-                    if (!isMusicPlaying) {
-                        backgroundMusic.load();
-                        backgroundMusic
-                            .play()
-                            .then(() => {
-                                isMusicPlaying = true;
-                                console.log("Background music started on retry");
-                            })
-                            .catch(() => {
-                                console.log("Final attempt failed");
-                            });
-                    }
-                }, 100);
+                console.log("❌ First attempt failed:", error.message);
+                // Immediate retry without delay
+                backgroundMusic.load();
+                backgroundMusic
+                    .play()
+                    .then(() => {
+                        isMusicPlaying = true;
+                        console.log("✅ Music started on immediate retry!");
+                    })
+                    .catch(() => {
+                        console.log("❌ All attempts failed");
+                    });
             });
     }
 }
@@ -600,15 +627,21 @@ function setupEventListeners() {
 // Function to try starting music on any interaction
 function tryStartMusic() {
     if (backgroundMusic && !isMusicPlaying && isAudioInitialized) {
-        console.log("Attempting to start music from interaction");
+        console.log("🎯 Attempting to start music from interaction");
+
+        // Ensure volume is set
+        backgroundMusic.volume = 0.25;
+
         backgroundMusic
             .play()
             .then(() => {
                 isMusicPlaying = true;
-                console.log("Music started successfully from interaction");
+                console.log("✅ Music started successfully from interaction");
             })
-            .catch(() => {
-                console.log("Music start failed from interaction");
+            .catch((error) => {
+                console.log("❌ Music start failed from interaction:", error.message);
+                // Set up interaction listeners if not already playing
+                addInteractionListeners();
             });
     }
 }
@@ -719,30 +752,29 @@ function animate() {
 
 // Start when page loads
 document.addEventListener("DOMContentLoaded", () => {
+    console.log("🚀 DOM loaded, initializing...");
     init();
 
-    // Additional attempts to start music
-    setTimeout(() => {
-        if (!isMusicPlaying && isAudioInitialized) {
-            console.log("Attempting delayed music start");
-            playBackgroundMusic();
-        }
-    }, 1000);
-
-    setTimeout(() => {
-        if (!isMusicPlaying && isAudioInitialized) {
-            console.log("Final attempt to start music");
-            tryStartMusic();
-        }
-    }, 2000);
+    // Immediate attempts without delay
+    if (!isMusicPlaying && isAudioInitialized) {
+        console.log("🎵 Immediate music start attempt");
+        playBackgroundMusic();
+    }
 });
 
 // Also try when window loads
 window.addEventListener("load", () => {
-    setTimeout(() => {
-        if (!isMusicPlaying && isAudioInitialized) {
-            console.log("Attempting music start on window load");
-            tryStartMusic();
-        }
-    }, 500);
+    console.log("🌐 Window loaded");
+    if (!isMusicPlaying && isAudioInitialized) {
+        console.log("🎵 Window load music attempt");
+        tryStartMusic();
+    }
+});
+
+// Try on page visibility change (when user returns to tab)
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && !isMusicPlaying && isAudioInitialized) {
+        console.log("👁️ Page visible, attempting music start");
+        tryStartMusic();
+    }
 });
