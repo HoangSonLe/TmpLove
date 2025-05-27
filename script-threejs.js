@@ -51,10 +51,14 @@ const loveMessages = [
     "Endless love",
 ];
 
-// Touch tracking variables
+// Touch tracking variables for continuous rotation
 let touchStartX = 0,
     touchStartY = 0,
+    touchLastX = 0,
+    touchLastY = 0,
     isTouching = false;
+let accumulatedRotationX = 0,
+    accumulatedRotationY = 0;
 
 // Initialize Three.js scene
 function init() {
@@ -65,10 +69,16 @@ function init() {
     camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 2000);
     camera.position.set(0, 0, 0); // Position at center to look around
 
-    // Create renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // Create renderer with high quality settings
+    renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance",
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // High DPI support
     renderer.setClearColor(0x0a0a0a, 1);
+    renderer.outputEncoding = THREE.sRGBEncoding;
     document.getElementById("three-container").appendChild(renderer.domElement);
 
     // Add lighting for better 3D effect
@@ -116,11 +126,12 @@ function createTextElements() {
 }
 
 function createTextMesh() {
-    // Create text geometry using canvas texture
+    // Create text geometry using high-resolution canvas texture
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
-    canvas.width = 800;
-    canvas.height = 200;
+    // Much higher resolution for crisp text
+    canvas.width = 1600;
+    canvas.height = 400;
 
     // Style the text
     context.fillStyle = "rgba(0, 0, 0, 0)";
@@ -132,29 +143,40 @@ function createTextMesh() {
     gradient.addColorStop(0.5, "#ff80b3");
     gradient.addColorStop(1, "#ff4d80");
 
+    // Enable high-quality text rendering
+    context.textRenderingOptimization = "optimizeQuality";
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+
     context.fillStyle = gradient;
-    context.font = "bold 72px Inter, Arial, sans-serif"; // Much bigger font
+    context.font = "bold 140px Inter, Arial, sans-serif"; // Much bigger font for high-res canvas
     context.textAlign = "center";
     context.textBaseline = "middle";
 
     // Add stronger glow effect
     context.shadowColor = "#ff80b3";
-    context.shadowBlur = 30;
+    context.shadowBlur = 40;
     context.shadowOffsetX = 0;
     context.shadowOffsetY = 0;
 
     const message = loveMessages[Math.floor(Math.random() * loveMessages.length)];
     context.fillText(message, canvas.width / 2, canvas.height / 2);
 
-    // Create texture from canvas
+    // Create texture from canvas with high quality settings
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.format = THREE.RGBAFormat;
 
-    // Create material
+    // Create material with better settings
     const material = new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
         opacity: 1,
+        alphaTest: 0.1,
+        side: THREE.DoubleSide,
     });
 
     // Create geometry - Much bigger text
@@ -187,28 +209,40 @@ function createTextMesh() {
 }
 
 function createHeartMesh() {
-    // Create heart using canvas
+    // Create heart using high-resolution canvas
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
-    canvas.width = 200;
-    canvas.height = 200;
+    canvas.width = 400;
+    canvas.height = 400;
+
+    // Enable high-quality rendering
+    context.textRenderingOptimization = "optimizeQuality";
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
 
     context.fillStyle = "rgba(0, 0, 0, 0)";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     context.fillStyle = "#ff6b9d";
-    context.font = "bold 120px Arial"; // Bigger hearts
+    context.font = "bold 240px Arial"; // Much bigger hearts for high-res
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.shadowColor = "#ff6b9d";
-    context.shadowBlur = 25;
+    context.shadowBlur = 30;
     context.fillText("💖", canvas.width / 2, canvas.height / 2);
 
     const texture = new THREE.CanvasTexture(canvas);
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.format = THREE.RGBAFormat;
+
     const material = new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
         opacity: 0.9,
+        alphaTest: 0.1,
+        side: THREE.DoubleSide,
     });
 
     const geometry = new THREE.PlaneGeometry(15, 15); // Bigger heart geometry
@@ -265,6 +299,8 @@ function handleTouchStart(event) {
     const touch = event.touches[0];
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
+    touchLastX = touch.clientX;
+    touchLastY = touch.clientY;
 }
 
 function handleTouchMove(event) {
@@ -272,45 +308,32 @@ function handleTouchMove(event) {
     if (!isTouching) return;
 
     const touch = event.touches[0];
-    const deltaX = (touch.clientX - touchStartX) / window.innerWidth;
-    const deltaY = (touch.clientY - touchStartY) / window.innerHeight;
 
-    mouseX = deltaX * 1.5; // Gentler for mobile
-    mouseY = deltaY * 1.5;
+    // Calculate movement delta from last position (not start position)
+    const deltaX = touch.clientX - touchLastX;
+    const deltaY = touch.clientY - touchLastY;
 
-    // Clamp values
-    mouseX = Math.max(-1, Math.min(1, mouseX));
-    mouseY = Math.max(-1, Math.min(1, mouseY));
+    // Update last position
+    touchLastX = touch.clientX;
+    touchLastY = touch.clientY;
 
-    // Gentler rotation for mobile
-    targetRotationY = mouseX * 60;
-    targetRotationX = -mouseY * 40;
+    // Accumulate rotation for continuous 360-degree movement
+    accumulatedRotationY += deltaX * 0.5; // Horizontal swipe = Y rotation (look left/right)
+    accumulatedRotationX += deltaY * 0.3; // Vertical swipe = X rotation (look up/down)
+
+    // Clamp vertical rotation to prevent over-rotation
+    accumulatedRotationX = Math.max(-90, Math.min(90, accumulatedRotationX));
+
+    // Set target rotations for smooth interpolation
+    targetRotationY = accumulatedRotationY;
+    targetRotationX = -accumulatedRotationX;
 }
 
 function handleTouchEnd(event) {
     event.preventDefault();
     isTouching = false;
-
-    // Smooth return to center
-    const returnToCenter = () => {
-        if (!isTouching) {
-            mouseX *= 0.95;
-            mouseY *= 0.95;
-
-            targetRotationY = mouseX * 60;
-            targetRotationX = -mouseY * 40;
-
-            if (Math.abs(mouseX) > 0.01 || Math.abs(mouseY) > 0.01) {
-                requestAnimationFrame(returnToCenter);
-            } else {
-                mouseX = 0;
-                mouseY = 0;
-                targetRotationX = 0;
-                targetRotationY = 0;
-            }
-        }
-    };
-    requestAnimationFrame(returnToCenter);
+    // Keep current rotation when touch ends - no return to center
+    // This allows for continuous 360-degree viewing
 }
 
 function onWindowResize() {
